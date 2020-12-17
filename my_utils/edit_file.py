@@ -118,7 +118,7 @@ def replace_line_in_hyp(replace_dict: dict, hyp_yaml='data/hyp_custom.yaml'):
         
         for key in replace_dict.keys():
             if key in line:
-                replaced_line = f"{str(key)} {replace_dict[key]}" # i.e.  hsv_h: 0.1
+                replaced_line = f"{str(key)}: {replace_dict[key]}" # i.e.  hsv_h: 0.1
             
         if replaced_line:
             previous_line = line
