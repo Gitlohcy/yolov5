@@ -13,6 +13,8 @@ from pdb import set_trace as st
 from typing import *
 from IPython.display import display
 import pyperclip as ppc
+import yaml
+
 
 def ls(p, r='*'):
     return list(p.glob(r))
@@ -48,6 +50,14 @@ def pd_len_dict(dict_list: List[dict]) -> pd.DataFrame:
 def arr_map(func, arr):
     return np.array(list(map(func, arr)))
 
+def dump_yaml(dict_, fpath):
+    with open(str(fpath), 'w') as f:
+        yaml.dump(dict_, f, sort_keys=False)
+
+def load_yaml(fpath):
+    with open(str(fpath)) as f:
+        dict_ = yaml.load(f, Loader=yaml.FullLoader)
+        return dict_
 
 Path.ls = ls
 Path.lls = lls
