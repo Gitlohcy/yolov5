@@ -37,7 +37,7 @@ def get_rand_img_meta(coco: COCO, imgIds: List[int], n: int):
     chosen_img = list(pd.Series(imgIds).sample(n))
     return coco.loadImgs(chosen_img)
 
-def img_mask_cls_id__from_coco_obj(img_dir: Path, coco: COCO, n_img: int, filter_cls_name: List=None):
+def img_mask_cls_id__from_coco_obj(img_dir: Path, coco: COCO, n_img: int, cname_map_dir: dict, filter_cls_name: List=None):
 
     catIds = coco.getCatIds(catNms=filter_cls_name) if filter_cls_name else coco.getCatIds()
 
@@ -53,11 +53,15 @@ def img_mask_cls_id__from_coco_obj(img_dir: Path, coco: COCO, n_img: int, filter
     #get img and mask
     img_n_masks = []
     for ann in anns:
-        img_id = ann['image_id']
-        img = imageio.imread(img_dir/img_meta_dict[img_id]['file_name'])
 
         #find cls id
         cls_id = ann['category_id']
+        c_name = coco.cats[cls_id]['name']
+        
+        img_id = ann['image_id']
+        product_name = cname_map_dir.get(c_name)
+        img_path = img_dir/product_name/img_meta_dict[img_id]['file_name']
+        img = imageio.imread(img_path)
         
         mask = (coco.annToMask(ann) > 0)
         segmap = iu.get_seg_map(img, mask)
@@ -360,13 +364,15 @@ def write_img_and_bboxes(img, labels, img_dest, lbl_dest):
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
-    parser.add_argument('--back-img-dir', type=str, default=None)
-    parser.add_argument('--small-img-dir', type=str, default=None)
-    parser.add_argument('--coco-json', type=str, default=None)
+    parser.add_argument('--back-img-dir', type=str, default=None, help='path to background image')
+    parser.add_argument('--small-img-dir', type=str, default=None, help='path to image used for pasting')
+    parser.add_argument('--coco-json', type=str, default=None, help='path to json file (small img labels)')
     parser.add_argument('--img-dest', type=str, default=Path.cwd()/'test_img_dir')
     parser.add_argument('--lbl-dest', type=str, default=Path.cwd()/'test_lbl_dir')
-    parser.add_argument('--num2gen', type=int, default=10)
-    parser.add_argument('--paste-num', type=int, default=8)
+    parser.add_argument('--num2gen', type=int, default=10, help='num of image to generate')
+    parser.add_argument('--paste-num', type=int, default=8, help='nom of image to paste for each image generation')
+    parser.add_argument('--cls-map', type=str, help='yaml path to load cls_name mapping')
+    
     opt = parser.parse_args()
 
 
@@ -394,8 +400,10 @@ modified_back_imgs = []
 img_file_type = ['*.jpg', '*.png']
 back_img_paths  = pd.Series(flat([back_img_dir.ls(img_type) for img_type in img_file_type]))
 
+cls_name_map_dir = load_yaml(opt.cls_map)
+
 for i in range(opt.num2gen):
-    img_n_masks = img_mask_cls_id__from_coco_obj(small_img_dir, coco, opt.paste_num)
+    img_n_masks = img_mask_cls_id__from_coco_obj(small_img_dir, coco, opt.paste_num, cls_name_map_dir)
 
     new_img_masks_cls_id = []
     for small_img, segmap, cls_id in img_n_masks:
