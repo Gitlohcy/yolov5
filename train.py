@@ -437,6 +437,7 @@ if __name__ == '__main__':
     parser.add_argument('--project', default='runs/train', help='save to project/name')
     parser.add_argument('--name', default='exp', help='save to project/name')
     parser.add_argument('--exist-ok', action='store_true', help='existing project/name ok, do not increment')
+    parser.add_argument('--label-cache-path', type=str, default='', help='specify the path for label.cache')
     opt = parser.parse_args()
 
     # Set DDP variables
