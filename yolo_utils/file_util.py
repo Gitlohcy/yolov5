@@ -1,8 +1,6 @@
 from .general import *
 
 
-def mkdir_r
-
 #read files
 def yoloLabel_lines_2_list(img, yolo_lines):
     ih, iw , _ = img.shape
