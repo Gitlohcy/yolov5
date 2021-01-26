@@ -346,8 +346,8 @@ def list_2_yoloLabel_lines(img, yolo_bboxes):
     str_lines = yolo_bboxes.astype('str')
     return str_lines
 
-def f_writelines(lines: List[str], fname):
-    lines = [','.join(list(line)) +'\n' for line in lines]
+def f_writelines(lines: List[str], fname, split_by=' '):
+    lines = [split_by.join(list(line)) +'\n' for line in lines]
     
     with open(str(fname), 'w') as f:
         f.writelines(lines)
