@@ -9,11 +9,11 @@ def yoloLabel_lines_2_list(img, yolo_lines):
     
     return yolo_lines.astype('int')
 
-def f_readlines(fname):
+def f_readlines(fname, split_char=' '):
     with open(str(fname), 'r') as f:
         lines = f.read().splitlines()
 
-    return np.array([line.split(',') for line in lines])
+    return np.array([line.split(split_char) for line in lines])
 
 def f_readlabels(img, fname):
     yolo_lines = f_readlines(fname)
