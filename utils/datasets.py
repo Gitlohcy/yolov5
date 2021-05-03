@@ -18,7 +18,7 @@ import torch
 from PIL import Image, ExifTags
 from torch.utils.data import Dataset
 from tqdm import tqdm
-from pdb import set_trace
+from pdb import set_trace as st
 
 from utils.general import xyxy2xywh, xywh2xyxy
 from utils.torch_utils import torch_distributed_zero_first
@@ -516,6 +516,8 @@ class LoadImagesAndLabels(Dataset):  # for training/testing
             # Load labels
             labels = []
             x = self.labels[index]
+            #replace generated labels here, ignore load_label first 
+
             if x.size > 0:
                 # Normalized xywh to pixel xyxy format
                 labels = x.copy()
@@ -523,7 +525,7 @@ class LoadImagesAndLabels(Dataset):  # for training/testing
                 labels[:, 2] = ratio[1] * h * (x[:, 2] - x[:, 4] / 2) + pad[1]  # pad height
                 labels[:, 3] = ratio[0] * w * (x[:, 1] + x[:, 3] / 2) + pad[0]
                 labels[:, 4] = ratio[1] * h * (x[:, 2] + x[:, 4] / 2) + pad[1]
-
+                st()
         if self.augment:
             # Augment imagespace
             if not mosaic:
