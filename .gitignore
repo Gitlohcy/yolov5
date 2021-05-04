@@ -1,3 +1,7 @@
+# Branch-specific GitIgnore ----
+nbs_dataloader/test_dataloader2.ipynb
+
+
 # Repo-specific GitIgnore ----------------------------------------------------------------------------------------------
 nbs/*
 *.jpg
