@@ -37,6 +37,22 @@ for orientation in ExifTags.TAGS.keys():
     if ExifTags.TAGS[orientation] == 'Orientation':
         break
 
+home = Path.home()
+data_yaml = home/'Documents/GitHub/yolo-util/data.yaml'
+hyp_yaml = home/'Documents/GitHub/yolo-util/hyp.yaml'
+with open(str(data_yaml)) as f:
+    data_dict = yaml.load(f, Loader=yaml.SafeLoader)
+
+with open(str(hyp_yaml)) as f:
+    hyp_dict = yaml.load(f, Loader=yaml.SafeLoader)
+
+# input
+# back_img_path = Path(data_dict['back_img'])
+front_img_path = Path(data_dict['front_img'])
+coco_path = Path(data_dict['coco_path'])
+paste_p = PasteProduct(hyp_dict, coco_path, front_img_path=front_img_path)
+paste_p.cache_imgs('front')
+
 
 def get_hash(files):
     # Returns a single hash value of a list of files
