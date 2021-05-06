@@ -23,6 +23,9 @@ from pdb import set_trace as st
 from utils.general import xyxy2xywh, xywh2xyxy
 from utils.torch_utils import torch_distributed_zero_first
 
+from utils.yolo_utils.general import *
+from paste_product import PasteProduct
+
 # Parameters
 help_url = 'https://github.com/ultralytics/yolov5/wiki/Train-Custom-Data'
 img_formats = ['bmp', 'jpg', 'jpeg', 'png', 'tif', 'tiff', 'dng']  # acceptable image suffixes
@@ -331,6 +334,9 @@ def img2label_paths(img_paths):
     sa, sb = os.sep + 'images' + os.sep, os.sep + 'labels' + os.sep  # /images/, /labels/ substrings
     return [x.replace(sa, sb, 1).replace('.' + x.split('.')[-1], '.txt') for x in img_paths]
 
+# import sys
+# sys.path.append('/Users/lohcy/Documents/GitHub/yolo-util')
+
 
 class LoadImagesAndLabels(Dataset):  # for training/testing
     def __init__(self, path, img_size=640, batch_size=16, augment=False, hyp=None, rect=False, image_weights=False,
@@ -343,6 +349,8 @@ class LoadImagesAndLabels(Dataset):  # for training/testing
         self.mosaic = self.augment and not self.rect  # load 4 images at a time into a mosaic (only during training)
         self.mosaic_border = [-img_size // 2, -img_size // 2]
         self.stride = stride
+
+        self.init_paste_product()
 
         try:
             f = []  # image files
@@ -431,6 +439,24 @@ class LoadImagesAndLabels(Dataset):  # for training/testing
                 gb += self.imgs[i].nbytes
                 pbar.desc = 'Caching images (%.1fGB)' % (gb / 1E9)
 
+    def init_paste_product(self):
+        home = Path.home()
+        data_yaml = home/'Documents/GitHub/yolo-util/data.yaml'
+        hyp_yaml = home/'Documents/GitHub/yolo-util/hyp.yaml'
+        with open(str(data_yaml)) as f:
+            data_dict = yaml.load(f, Loader=yaml.SafeLoader)
+
+        with open(str(hyp_yaml)) as f:
+            hyp_dict = yaml.load(f, Loader=yaml.SafeLoader)
+
+        # input
+        back_img_path = Path(data_dict['back_img'])
+        front_img_path = Path(data_dict['front_img'])
+        coco_path = Path(data_dict['coco_path'])
+
+        self.paste_p = PasteProduct(hyp_dict, coco_path, back_img_path, front_img_path)
+
+
     def cache_labels(self, path=Path('./labels.cache')):
         # Cache dataset labels, check images and read shapes
         x = {}  # dict
@@ -485,6 +511,10 @@ class LoadImagesAndLabels(Dataset):  # for training/testing
     #     print('ran dataset iter')
     #     #self.shuffled_vector = np.random.permutation(self.nF) if self.augment else np.arange(self.nF)
     #     return self
+    def norm_bb(self, img, bboxes):
+        h, w, chnl = img.shape
+        # y = x.copy()
+        return bboxes.copy() / [w, h, w, h]
 
     def __getitem__(self, index):
         if self.image_weights:
@@ -507,7 +537,18 @@ class LoadImagesAndLabels(Dataset):  # for training/testing
         else:
             # Load image
             img, (h0, w0), (h, w) = load_image(self, index)
+            img = img[:, :, ::-1]  # BGR 2 RGB
+            # ia.imshow(img)
+            labels = []
+            img, labels = self.paste_p.paste_next(img)  #(h,w, chnl)__RGB,  xyxy
+            labels[:, 1:] = xyxy2xywh(labels[:, 1:])
+            labels[:, 1:] = self.norm_bb(img, labels[:, 1:])
             my_img = img.copy()
+            my_labels = labels.copy()
+
+            # print(labels)
+            img = img[:, :, ::-1]  # RGB 2 BGR
+
 
             # Letterbox
             shape = self.batch_shapes[self.batch[index]] if self.rect else self.img_size  # final letterboxed shape
@@ -515,13 +556,13 @@ class LoadImagesAndLabels(Dataset):  # for training/testing
             shapes = (h0, w0), ((h / h0, w / w0), pad)  # for COCO mAP rescaling
 
             # Load labels
-            labels = []
-            my_lables = []
-            x = self.labels[index]
+            # labels = []
+            # my_lables = []
+            # x = self.labels[index]
+            x = labels
             #replace generated labels here, ignore load_label first 
 
             if x.size > 0:
-                my_labels = x.copy()
                 # Normalized xywh to pixel xyxy format
                 labels = x.copy()
                 labels[:, 1] = ratio[0] * w * (x[:, 1] - x[:, 3] / 2) + pad[0]  # pad width
