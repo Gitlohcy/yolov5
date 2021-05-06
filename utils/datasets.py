@@ -37,20 +37,20 @@ for orientation in ExifTags.TAGS.keys():
     if ExifTags.TAGS[orientation] == 'Orientation':
         break
 
-home = Path.home()
-data_yaml = home/'Documents/GitHub/yolo-util/data.yaml'
-hyp_yaml = home/'Documents/GitHub/yolo-util/hyp.yaml'
-with open(str(data_yaml)) as f:
-    data_dict = yaml.load(f, Loader=yaml.SafeLoader)
 
-with open(str(hyp_yaml)) as f:
-    hyp_dict = yaml.load(f, Loader=yaml.SafeLoader)
+paste_data_yaml = './paste_data.yaml'
+paste_hyp_yaml = './paste_hyp.yaml'
+with open(str(paste_data_yaml)) as f:
+    paste_data_dict = yaml.load(f, Loader=yaml.SafeLoader)
+
+with open(str(paste_hyp_yaml)) as f:
+    paste_hyp_dict = yaml.load(f, Loader=yaml.SafeLoader)
 
 # input
 # back_img_path = Path(data_dict['back_img'])
-front_img_path = Path(data_dict['front_img'])
-coco_path = Path(data_dict['coco_path'])
-paste_p = PasteProduct(hyp_dict, coco_path, front_img_path=front_img_path)
+front_img_path = Path(paste_data_dict['front_img'])
+coco_path = Path(paste_data_dict['coco_path'])
+paste_p = PasteProduct(paste_hyp_dict, coco_path, front_img_path=front_img_path)
 paste_p.cache_imgs('front')
 
 
@@ -365,7 +365,7 @@ class LoadImagesAndLabels(Dataset):  # for training/testing
         self.mosaic_border = [-img_size // 2, -img_size // 2]
         self.stride = stride
 
-        self.init_paste_product()
+        # self.init_paste_product()
 
         try:
             f = []  # image files
@@ -453,24 +453,6 @@ class LoadImagesAndLabels(Dataset):  # for training/testing
                 self.imgs[i], self.img_hw0[i], self.img_hw[i] = x  # img, hw_original, hw_resized = load_image(self, i)
                 gb += self.imgs[i].nbytes
                 pbar.desc = 'Caching images (%.1fGB)' % (gb / 1E9)
-
-    def init_paste_product(self):
-        home = Path.home()
-        data_yaml = home/'Documents/GitHub/yolo-util/data.yaml'
-        hyp_yaml = home/'Documents/GitHub/yolo-util/hyp.yaml'
-        with open(str(data_yaml)) as f:
-            data_dict = yaml.load(f, Loader=yaml.SafeLoader)
-
-        with open(str(hyp_yaml)) as f:
-            hyp_dict = yaml.load(f, Loader=yaml.SafeLoader)
-
-        # input
-        back_img_path = Path(data_dict['back_img'])
-        front_img_path = Path(data_dict['front_img'])
-        coco_path = Path(data_dict['coco_path'])
-
-        self.paste_p = PasteProduct(hyp_dict, coco_path, back_img_path, front_img_path)
-
 
     def cache_labels(self, path=Path('./labels.cache')):
         # Cache dataset labels, check images and read shapes
