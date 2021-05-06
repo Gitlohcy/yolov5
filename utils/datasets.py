@@ -539,11 +539,14 @@ class LoadImagesAndLabels(Dataset):  # for training/testing
             img = img[:, :, ::-1]  # BGR 2 RGB
 
             labels = []
+            shp_before_paste = img.shape
             img, labels = self.paste_p.paste_next(img)  #(h,w, chnl)__RGB,  [cls_id, *xyxy]
             labels[:, 1:] = xyxy2xywh(labels[:, 1:])
             labels[:, 1:] = self.norm_bb(img, labels[:, 1:])
 
             img = img[:, :, ::-1]  # RGB 2 BGR
+            if shp_before_paste != img.shape:
+                raise ValueError('the img shape has changed, the following augmentation might not working properly')
 
 
             # Letterbox
