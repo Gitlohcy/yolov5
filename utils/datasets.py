@@ -62,7 +62,6 @@ def create_dataloader(path, imgsz, batch_size, stride, opt, hyp=None, augment=Fa
                       rank=-1, world_size=1, workers=8):
     # Make sure only the first process in DDP process the dataset first, and the following others can use the cache
     with torch_distributed_zero_first(rank):
-        set_trace()
         dataset = LoadImagesAndLabels(path, imgsz, batch_size,
                                       augment=augment,  # augment images
                                       hyp=hyp,  # augmentation hyperparameters
@@ -511,9 +510,9 @@ class LoadImagesAndLabels(Dataset):  # for training/testing
     #     print('ran dataset iter')
     #     #self.shuffled_vector = np.random.permutation(self.nF) if self.augment else np.arange(self.nF)
     #     return self
+
     def norm_bb(self, img, bboxes):
         h, w, chnl = img.shape
-        # y = x.copy()
         return bboxes.copy() / [w, h, w, h]
 
     def __getitem__(self, index):
@@ -538,15 +537,12 @@ class LoadImagesAndLabels(Dataset):  # for training/testing
             # Load image
             img, (h0, w0), (h, w) = load_image(self, index)
             img = img[:, :, ::-1]  # BGR 2 RGB
-            # ia.imshow(img)
+
             labels = []
-            img, labels = self.paste_p.paste_next(img)  #(h,w, chnl)__RGB,  xyxy
+            img, labels = self.paste_p.paste_next(img)  #(h,w, chnl)__RGB,  [cls_id, *xyxy]
             labels[:, 1:] = xyxy2xywh(labels[:, 1:])
             labels[:, 1:] = self.norm_bb(img, labels[:, 1:])
-            my_img = img.copy()
-            my_labels = labels.copy()
 
-            # print(labels)
             img = img[:, :, ::-1]  # RGB 2 BGR
 
 
@@ -556,11 +552,8 @@ class LoadImagesAndLabels(Dataset):  # for training/testing
             shapes = (h0, w0), ((h / h0, w / w0), pad)  # for COCO mAP rescaling
 
             # Load labels
-            # labels = []
-            # my_lables = []
             # x = self.labels[index]
             x = labels
-            #replace generated labels here, ignore load_label first 
 
             if x.size > 0:
                 # Normalized xywh to pixel xyxy format
@@ -614,7 +607,7 @@ class LoadImagesAndLabels(Dataset):  # for training/testing
         img = img[:, :, ::-1].transpose(2, 0, 1)  # BGR to RGB, to 3x416x416
         img = np.ascontiguousarray(img)
 
-        return torch.from_numpy(img), labels_out, self.img_files[index], shapes, my_img, my_labels
+        return torch.from_numpy(img), labels_out, self.img_files[index], shapes
 
     @staticmethod
     def collate_fn(batch):
