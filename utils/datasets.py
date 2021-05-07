@@ -23,7 +23,6 @@ from pdb import set_trace as st
 from utils.general import xyxy2xywh, xywh2xyxy
 from utils.torch_utils import torch_distributed_zero_first
 
-from utils.yolo_utils.general import *
 from paste_product import PasteProduct
 
 # Parameters
@@ -38,20 +37,6 @@ for orientation in ExifTags.TAGS.keys():
         break
 
 
-paste_data_yaml = './paste_data.yaml'
-paste_hyp_yaml = './paste_hyp.yaml'
-with open(str(paste_data_yaml)) as f:
-    paste_data_dict = yaml.load(f, Loader=yaml.SafeLoader)
-
-with open(str(paste_hyp_yaml)) as f:
-    paste_hyp_dict = yaml.load(f, Loader=yaml.SafeLoader)
-
-# input
-# back_img_path = Path(data_dict['back_img'])
-front_img_path = Path(paste_data_dict['front_img'])
-coco_path = Path(paste_data_dict['coco_path'])
-paste_p = PasteProduct(paste_hyp_dict, coco_path, front_img_path=front_img_path)
-paste_p.cache_imgs('front')
 
 
 def get_hash(files):
@@ -75,7 +60,7 @@ def exif_size(img):
 
 
 def create_dataloader(path, imgsz, batch_size, stride, opt, hyp=None, augment=False, cache=False, pad=0.0, rect=False,
-                      rank=-1, world_size=1, workers=8):
+                      rank=-1, world_size=1, workers=8, paste_obj=None):
     # Make sure only the first process in DDP process the dataset first, and the following others can use the cache
     with torch_distributed_zero_first(rank):
         dataset = LoadImagesAndLabels(path, imgsz, batch_size,
@@ -86,7 +71,7 @@ def create_dataloader(path, imgsz, batch_size, stride, opt, hyp=None, augment=Fa
                                       single_cls=opt.single_cls,
                                       stride=int(stride),
                                       pad=pad,
-                                      rank=rank)
+                                      rank=rank, paste_obj=paste_obj)
 
     batch_size = min(batch_size, len(dataset))
     nw = min([os.cpu_count() // world_size, batch_size if batch_size > 1 else 0, workers])  # number of workers
@@ -355,7 +340,7 @@ def img2label_paths(img_paths):
 
 class LoadImagesAndLabels(Dataset):  # for training/testing
     def __init__(self, path, img_size=640, batch_size=16, augment=False, hyp=None, rect=False, image_weights=False,
-                 cache_images=False, single_cls=False, stride=32, pad=0.0, rank=-1):
+                 cache_images=False, single_cls=False, stride=32, pad=0.0, rank=-1, paste_obj=None):
         self.img_size = img_size
         self.augment = augment
         self.hyp = hyp
@@ -364,6 +349,10 @@ class LoadImagesAndLabels(Dataset):  # for training/testing
         self.mosaic = self.augment and not self.rect  # load 4 images at a time into a mosaic (only during training)
         self.mosaic_border = [-img_size // 2, -img_size // 2]
         self.stride = stride
+
+        if not isinstance(paste_obj, PasteProduct):
+            raise TypeError('instance of PasteProduct is not set')
+        self.paste_obj = paste_obj
 
         # self.init_paste_product()
 
@@ -538,7 +527,7 @@ class LoadImagesAndLabels(Dataset):  # for training/testing
 
             labels = []
             shp_before_paste = img.shape
-            img, labels = self.paste_p.paste_next(img)  #(h,w, chnl)__RGB,  [cls_id, *xyxy]
+            img, labels = self.paste_obj.paste_next(img)  #(h,w, chnl)__RGB,  [cls_id, *xyxy]
             labels[:, 1:] = xyxy2xywh(labels[:, 1:])
             labels[:, 1:] = self.norm_bb(img, labels[:, 1:])
 

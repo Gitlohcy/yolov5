@@ -1,12 +1,16 @@
 # import yolo_utils.file_util as fu
 # from yolo_utils.general import *
-from gen_image import *
+from .gen_image import *
 from typing import List
+import yaml
+from Pathlib import Path
 
 class PasteProduct:
+
     img_file_type = ['.jpg', '.png', '.jpeg']
 
-    def __init__(self, hyp_dict, coco_path, back_img_path=None, front_img_path=None, cls_names:List[str] = None):
+    def __init__(self, hyp_dict, coco_path, back_img_path=None,
+                    front_img_path=None, cls_names:List[str] = None):
         self.front_imgs = {}
 
         if back_img_path:
@@ -262,13 +266,28 @@ class PasteProduct:
 
         return pasted_back_img, bboxes
 
-    def __iter__(self):
-        return self
 
-    def __next__(self):
-        if self.n > self.max:
-            raise StopIteration
+def create_paste_instance(paste_data_yaml, paste_hyp_yaml, cache='front'):
+    paste_data_yaml = './paste_data.yaml'
+    paste_hyp_yaml = './paste_hyp.yaml'
+    
+    with open(str(paste_data_yaml)) as f:
+        paste_data_dict = yaml.load(f, Loader=yaml.SafeLoader)
+    with open(str(paste_hyp_yaml)) as f:
+        paste_hyp_dict = yaml.load(f, Loader=yaml.SafeLoader)
 
-        result = 2 ** self.n
-        self.n += 1
-        return result
+    # input
+    # back_img_path = Path(data_dict['back_img'])
+    front_img_path = Path(paste_data_dict['front_img'])
+    coco_path = Path(paste_data_dict['coco_path'])
+    if not front_img_path.is_file():
+        raise ValueError('front_img_path is no a valid file path')
+
+    if not coco_path.is_file() or coco_path.suffix != '.json':
+        raise ValueError('coco_path is no a valid json file')
+
+    paste_p = PasteProduct(paste_hyp_dict, coco_path, front_img_path=front_img_path)
+    if cache in ['front', 'back']:
+        paste_p.cache_imgs(cache)
+        
+    return paste_p
