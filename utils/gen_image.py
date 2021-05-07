@@ -3,11 +3,11 @@ import re
 import random
 from pycocotools.coco import COCO
 
-from yolo_utils.general import *
-import yolo_utils.imgaug_util as iu
-import yolo_utils.plot_util as pu
-import yolo_utils.file_util as fu
-import yolo_utils.bbox_util as bu
+from .yolo_utils.general import *
+import .yolo_utils.imgaug_util as iu
+import .yolo_utils.plot_util as pu
+import .yolo_utils.file_util as fu
+import .yolo_utils.bbox_util as bu
 
 import imageio
 import imgaug as ia
