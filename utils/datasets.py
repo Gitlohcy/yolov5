@@ -23,7 +23,7 @@ from pdb import set_trace as st
 from utils.general import xyxy2xywh, xywh2xyxy
 from utils.torch_utils import torch_distributed_zero_first
 
-from paste_product import PasteProduct
+from utils.paste_product import PasteProduct
 
 # Parameters
 help_url = 'https://github.com/ultralytics/yolov5/wiki/Train-Custom-Data'
@@ -60,7 +60,7 @@ def exif_size(img):
 
 
 def create_dataloader(path, imgsz, batch_size, stride, opt, hyp=None, augment=False, cache=False, pad=0.0, rect=False,
-                      rank=-1, world_size=1, workers=8, paste_obj=None):
+                      rank=-1, world_size=1, workers=8, paste_obj=None, cache_label=True):
     # Make sure only the first process in DDP process the dataset first, and the following others can use the cache
     with torch_distributed_zero_first(rank):
         dataset = LoadImagesAndLabels(path, imgsz, batch_size,
@@ -71,7 +71,7 @@ def create_dataloader(path, imgsz, batch_size, stride, opt, hyp=None, augment=Fa
                                       single_cls=opt.single_cls,
                                       stride=int(stride),
                                       pad=pad,
-                                      rank=rank, paste_obj=paste_obj)
+                                      rank=rank, paste_obj=paste_obj, cache_label=cache_label)
 
     batch_size = min(batch_size, len(dataset))
     nw = min([os.cpu_count() // world_size, batch_size if batch_size > 1 else 0, workers])  # number of workers
@@ -340,7 +340,7 @@ def img2label_paths(img_paths):
 
 class LoadImagesAndLabels(Dataset):  # for training/testing
     def __init__(self, path, img_size=640, batch_size=16, augment=False, hyp=None, rect=False, image_weights=False,
-                 cache_images=False, single_cls=False, stride=32, pad=0.0, rank=-1, paste_obj=None):
+                 cache_images=False, single_cls=False, stride=32, pad=0.0, rank=-1, paste_obj=None, cache_label=True):
         self.img_size = img_size
         self.augment = augment
         self.hyp = hyp
@@ -377,12 +377,13 @@ class LoadImagesAndLabels(Dataset):  # for training/testing
         # Check cache
         self.label_files = img2label_paths(self.img_files)  # labels
         cache_path = Path(self.label_files[0]).parent.with_suffix('.cache')  # cached labels
-        if cache_path.is_file():
-            cache = torch.load(cache_path)  # load
-            if cache['hash'] != get_hash(self.label_files + self.img_files) or 'results' not in cache:  # changed
-                cache = self.cache_labels(cache_path)  # re-cache
-        else:
-            cache = self.cache_labels(cache_path)  # cache
+        if cache_label:
+            if cache_path.is_file():
+                cache = torch.load(cache_path)  # load
+                if cache['hash'] != get_hash(self.label_files + self.img_files) or 'results' not in cache:  # changed
+                    cache = self.cache_labels(cache_path)  # re-cache
+            else:
+                cache = self.cache_labels(cache_path)  # cache
 
         # Display cache
         [nf, nm, ne, nc, n] = cache.pop('results')  # found, missing, empty, corrupted, total

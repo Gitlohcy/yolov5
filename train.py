@@ -186,7 +186,9 @@ def train(hyp, opt, device, tb_writer=None, wandb=None):
     # Trainloader
     dataloader, dataset = create_dataloader(train_path, imgsz, batch_size, gs, opt,
                                             hyp=hyp, augment=True, cache=opt.cache_images, rect=opt.rect,
-                                            rank=rank, world_size=opt.world_size, workers=opt.workers, paste_obj=paste_p)
+                                            rank=rank, world_size=opt.world_size, workers=opt.workers, paste_obj=paste_p,
+                                            cache_label=opt.cache_label)
+                                            
     mlc = np.concatenate(dataset.labels, 0)[:, 0].max()  # max label class
     nb = len(dataloader)  # number of batches
     assert mlc < nc, 'Label class %g exceeds nc=%g in %s. Possible class labels are 0-%g' % (mlc, nc, opt.data, nc - 1)
@@ -196,7 +198,8 @@ def train(hyp, opt, device, tb_writer=None, wandb=None):
         ema.updates = start_epoch * nb // accumulate  # set EMA updates
         testloader = create_dataloader(test_path, imgsz_test, total_batch_size, gs, opt,
                                        hyp=hyp, cache=opt.cache_images and not opt.notest, rect=True,
-                                       rank=-1, world_size=opt.world_size, workers=opt.workers, paste_obj=paste_p)[0]  # testloader
+                                       rank=-1, world_size=opt.world_size, workers=opt.workers, paste_obj=paste_p,
+                                       cache_label=opt.cache_label)[0]  # testloader
 
         if not opt.resume:
             labels = np.concatenate(dataset.labels, 0)
@@ -443,6 +446,7 @@ if __name__ == '__main__':
     parser.add_argument('--exist-ok', action='store_true', help='existing project/name ok, do not increment')
     parser.add_argument('--paste-data', type=str, default='data/paste_data.yaml', help='paste_data.yaml path')
     parser.add_argument('--paste-hyp', type=str, default='data/paste_hyp.yaml', help='paste hyperparameters path')
+    parser.add_argument('--cache-label', action='store_true', help='disable cache label')
     opt = parser.parse_args()
 
     # Set DDP variables
