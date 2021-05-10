@@ -385,31 +385,39 @@ class LoadImagesAndLabels(Dataset):  # for training/testing
             else:
                 cache = self.cache_labels(cache_path)  # cache
 
-        # Display cache
-        [nf, nm, ne, nc, n] = cache.pop('results')  # found, missing, empty, corrupted, total
-        desc = f"Scanning '{cache_path}' for images and labels... {nf} found, {nm} missing, {ne} empty, {nc} corrupted"
-        tqdm(None, desc=desc, total=n, initial=n)
-        assert nf > 0 or not augment, f'No labels found in {cache_path}. Can not train without labels. See {help_url}'
+            # Display cache
+            [nf, nm, ne, nc, n] = cache.pop('results')  # found, missing, empty, corrupted, total
+            desc = f"Scanning '{cache_path}' for images and labels... {nf} found, {nm} missing, {ne} empty, {nc} corrupted"
+            tqdm(None, desc=desc, total=n, initial=n)
+            assert nf > 0 or not augment, f'No labels found in {cache_path}. Can not train without labels. See {help_url}'
+        
 
-        # Read cache
-        cache.pop('hash')  # remove hash
-        labels, shapes = zip(*cache.values())
-        self.labels = list(labels)
-        self.shapes = np.array(shapes, dtype=np.float64)
-        self.img_files = list(cache.keys())  # update
-        self.label_files = img2label_paths(cache.keys())  # update
-        if single_cls:
-            for x in self.labels:
-                x[:, 0] = 0
+            # Read cache
+            cache.pop('hash')  # remove hash
+            labels, shapes = zip(*cache.values())
+            self.labels = list(labels)
+            self.shapes = np.array(shapes, dtype=np.float64)
+            self.img_files = list(cache.keys())  # update
+            self.label_files = img2label_paths(cache.keys())  # update
+            if single_cls:
+                for x in self.labels:
+                    x[:, 0] = 0
+        else:
+            self.shapes = None
 
-        n = len(shapes)  # number of images
+
+        n = len(shapes) if cache_label else len(self.img_files)  # number of images
         bi = np.floor(np.arange(n) / batch_size).astype(np.int)  # batch index
         nb = bi[-1] + 1  # number of batches
         self.batch = bi  # batch index of image
         self.n = n
 
+            
+
         # Rectangular Training
         if self.rect:
+            if cache_label:
+                raise("cache_label is not supported yet due to shapes is not resolved")
             # Sort by aspect ratio
             s = self.shapes  # wh
             ar = s[:, 1] / s[:, 0]  # aspect ratio
