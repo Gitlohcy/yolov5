@@ -266,8 +266,6 @@ class PasteProduct:
 
 
 def create_paste_instance(paste_data_yaml, paste_hyp_yaml, cache='front'):
-    paste_data_yaml = './paste_data.yaml'
-    paste_hyp_yaml = './paste_hyp.yaml'
     
     with open(str(paste_data_yaml)) as f:
         paste_data_dict = yaml.load(f, Loader=yaml.SafeLoader)
