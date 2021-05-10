@@ -278,8 +278,8 @@ def create_paste_instance(paste_data_yaml, paste_hyp_yaml, cache='front'):
     # back_img_path = Path(data_dict['back_img'])
     front_img_path = Path(paste_data_dict['front_img'])
     coco_path = Path(paste_data_dict['coco_path'])
-    if not front_img_path.is_file():
-        raise ValueError('front_img_path is no a valid file path')
+    if not (front_img_path.is_file() or front_img_path.is_dir()):
+        raise ValueError('front_img_path is no a valid file or directory path')
 
     if not coco_path.is_file() or coco_path.suffix != '.json':
         raise ValueError('coco_path is no a valid json file')
