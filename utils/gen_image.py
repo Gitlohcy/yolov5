@@ -3,11 +3,11 @@ import re
 import random
 from pycocotools.coco import COCO
 
-from yolo_utils.general import *
-import yolo_utils.imgaug_util as iu
-import yolo_utils.plot_util as pu
-import yolo_utils.file_util as fu
-import yolo_utils.bbox_util as bu
+from utils.yolo_utils.general import *
+import utils.yolo_utils.imgaug_util as iu
+import utils.yolo_utils.plot_util as pu
+import utils.yolo_utils.file_util as fu
+import utils.yolo_utils.bbox_util as bu
 
 import imageio
 import imgaug as ia
@@ -629,8 +629,3 @@ def run():
 
         bboxes = bbs_to_yoloList(clean_bbs)
         fu.write_img_and_bboxes(pasted_back_img, bboxes, img_dest, lbl_dest)
-
-
-
-if __name__ == '__main__':
-    run()
