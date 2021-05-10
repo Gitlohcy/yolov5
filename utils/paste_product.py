@@ -1,9 +1,7 @@
-# import yolo_utils.file_util as fu
-# from yolo_utils.general import *
-from .gen_image import *
+from utils.gen_image import *
 from typing import List
 import yaml
-from Pathlib import Path
+from pathlib import Path
 
 class PasteProduct:
 

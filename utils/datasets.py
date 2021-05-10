@@ -23,7 +23,7 @@ from pdb import set_trace as st
 from utils.general import xyxy2xywh, xywh2xyxy
 from utils.torch_utils import torch_distributed_zero_first
 
-from paste_product import PasteProduct
+from utils.paste_product import PasteProduct
 
 # Parameters
 help_url = 'https://github.com/ultralytics/yolov5/wiki/Train-Custom-Data'
