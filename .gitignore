@@ -1,5 +1,6 @@
 # Branch-specific GitIgnore ----
 nbs_dataloader/test_dataloader2.ipynb
+nbs_dataloader/test_pasteProduct.ipynb
 
 
 # Repo-specific GitIgnore ----------------------------------------------------------------------------------------------
