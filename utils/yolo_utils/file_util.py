@@ -102,3 +102,15 @@ def img_list_from(img_path, img_file_type):
             'only list of Path and directory of imgs is supported')
 
     return img_list
+
+
+def read_color_imgs(img_paths: pd.Series, n=int, verbose=True):
+    img_to_read = img_paths.sample(n)
+    for p in img_to_read:
+        img = imageio.imread(p)
+        if img.ndim == 3:
+            yield img
+        else:
+            if verbose:
+                print('pass grey scale img')
+            yield next(read_color_imgs(img_paths, 1))
