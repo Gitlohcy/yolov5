@@ -196,7 +196,7 @@ class PasteProduct:
         else:
             raise ValueError('only `back` or `front` is allowed')
 
-    def paste_next(self, back_img, num2gen=1):
+    def paste_front_imgs(self, back_img, num2gen=1):
         pasted_back_img_list = []
         clean_bbs_list = []
 
