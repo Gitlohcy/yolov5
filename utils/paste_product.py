@@ -12,13 +12,9 @@ class PasteProduct:
         self.front_imgs = {}
 
         if back_img_path:
-            self.back_img_path = back_img_path
-            print('reading back_img paths...')
-            self.back_fnames = fu.img_list_from(back_img_path, self.img_file_type)
+            self.set_back_fnames(back_img_path)
         if front_img_path:
-            self.front_img_path = front_img_path
-            print('reading front_img paths...')
-            self.front_fnames = [f"{p.parent.name}/{p.name}" for p in fu.img_list_from(front_img_path, self.img_file_type)]
+            self.set_front_fnames(front_img_path)
 
         self.set_coco(coco_path)
         self.set_coco_df()
@@ -26,7 +22,18 @@ class PasteProduct:
         self.set_hyp_dict(hyp_dict)
         self.reset_augs()
         self.reset_data_dist()
-        
+
+    def set_back_fnames(self, back_img_path):
+        self.back_img_path = Path(back_img_path)
+        print('reading back_img paths...')
+        self.back_fnames = pd.Series(fu.img_list_from(self.back_img_path, self.img_file_type))
+
+    def set_front_fnames(self, front_img_path):
+        self.front_img_path = Path(front_img_path)
+        print('reading front_img paths...')
+        self.front_fnames = [f"{p.parent.name}/{p.name}" 
+                                for p in fu.img_list_from(self.front_img_path, self.img_file_type)]
+
     def set_mask(self, cls_names:List[str] = None):
         
         catIds = self.coco.getCatIds(catNms=cls_names) if cls_names else self.coco.getCatIds()
@@ -264,25 +271,34 @@ class PasteProduct:
 
         return pasted_back_img, bboxes
 
+    def generate(self, n):
+        imgs, bboxes = np.array([self.paste_front_imgs(imageio.imread(p))
+                        for p in self.back_fnames.sample(n)]
+                        , dtype='object').T
+        return imgs, bboxes
 
 def create_paste_instance(paste_data_yaml, paste_hyp_yaml, cache='front'):
-    
+
+
     with open(str(paste_data_yaml)) as f:
         paste_data_dict = yaml.load(f, Loader=yaml.SafeLoader)
     with open(str(paste_hyp_yaml)) as f:
         paste_hyp_dict = yaml.load(f, Loader=yaml.SafeLoader)
 
     # input
-    # back_img_path = Path(data_dict['back_img'])
+    back_img_path = Path(paste_data_dict['back_img']) if 'back_img' in paste_data_dict else None
+
     front_img_path = Path(paste_data_dict['front_img'])
     coco_path = Path(paste_data_dict['coco_path'])
+
+
     if not (front_img_path.is_file() or front_img_path.is_dir()):
         raise ValueError('front_img_path is no a valid file or directory path')
 
     if not coco_path.is_file() or coco_path.suffix != '.json':
         raise ValueError('coco_path is no a valid json file')
 
-    paste_p = PasteProduct(paste_hyp_dict, coco_path, front_img_path=front_img_path)
+    paste_p = PasteProduct(paste_hyp_dict, coco_path, front_img_path=front_img_path, back_img_path=back_img_path)
     if cache in ['front', 'back']:
         paste_p.cache_imgs(cache)
         
