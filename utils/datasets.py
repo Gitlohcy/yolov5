@@ -60,7 +60,7 @@ def exif_size(img):
 
 
 def create_dataloader(path, imgsz, batch_size, stride, opt, hyp=None, augment=False, cache=False, pad=0.0, rect=False,
-                      rank=-1, world_size=1, workers=8, paste_obj=None):
+                      rank=-1, world_size=1, workers=8, paste_obj=None, cache_label=True):
     # Make sure only the first process in DDP process the dataset first, and the following others can use the cache
     with torch_distributed_zero_first(rank):
         dataset = LoadImagesAndLabels(path, imgsz, batch_size,
@@ -71,7 +71,7 @@ def create_dataloader(path, imgsz, batch_size, stride, opt, hyp=None, augment=Fa
                                       single_cls=opt.single_cls,
                                       stride=int(stride),
                                       pad=pad,
-                                      rank=rank, paste_obj=paste_obj)
+                                      rank=rank, paste_obj=paste_obj, cache_label=cache_label)
 
     batch_size = min(batch_size, len(dataset))
     nw = min([os.cpu_count() // world_size, batch_size if batch_size > 1 else 0, workers])  # number of workers
@@ -340,7 +340,7 @@ def img2label_paths(img_paths):
 
 class LoadImagesAndLabels(Dataset):  # for training/testing
     def __init__(self, path, img_size=640, batch_size=16, augment=False, hyp=None, rect=False, image_weights=False,
-                 cache_images=False, single_cls=False, stride=32, pad=0.0, rank=-1, paste_obj=None):
+                 cache_images=False, single_cls=False, stride=32, pad=0.0, rank=-1, paste_obj=None, cache_label=True):
         self.img_size = img_size
         self.augment = augment
         self.hyp = hyp
@@ -377,38 +377,47 @@ class LoadImagesAndLabels(Dataset):  # for training/testing
         # Check cache
         self.label_files = img2label_paths(self.img_files)  # labels
         cache_path = Path(self.label_files[0]).parent.with_suffix('.cache')  # cached labels
-        if cache_path.is_file():
-            cache = torch.load(cache_path)  # load
-            if cache['hash'] != get_hash(self.label_files + self.img_files) or 'results' not in cache:  # changed
-                cache = self.cache_labels(cache_path)  # re-cache
+        if cache_label:
+            if cache_path.is_file():
+                cache = torch.load(cache_path)  # load
+                if cache['hash'] != get_hash(self.label_files + self.img_files) or 'results' not in cache:  # changed
+                    cache = self.cache_labels(cache_path)  # re-cache
+            else:
+                cache = self.cache_labels(cache_path)  # cache
+
+            # Display cache
+            [nf, nm, ne, nc, n] = cache.pop('results')  # found, missing, empty, corrupted, total
+            desc = f"Scanning '{cache_path}' for images and labels... {nf} found, {nm} missing, {ne} empty, {nc} corrupted"
+            tqdm(None, desc=desc, total=n, initial=n)
+            assert nf > 0 or not augment, f'No labels found in {cache_path}. Can not train without labels. See {help_url}'
+        
+
+            # Read cache
+            cache.pop('hash')  # remove hash
+            labels, shapes = zip(*cache.values())
+            self.labels = list(labels)
+            self.shapes = np.array(shapes, dtype=np.float64)
+            self.img_files = list(cache.keys())  # update
+            self.label_files = img2label_paths(cache.keys())  # update
+            if single_cls:
+                for x in self.labels:
+                    x[:, 0] = 0
         else:
-            cache = self.cache_labels(cache_path)  # cache
+            self.shapes = None
 
-        # Display cache
-        [nf, nm, ne, nc, n] = cache.pop('results')  # found, missing, empty, corrupted, total
-        desc = f"Scanning '{cache_path}' for images and labels... {nf} found, {nm} missing, {ne} empty, {nc} corrupted"
-        tqdm(None, desc=desc, total=n, initial=n)
-        assert nf > 0 or not augment, f'No labels found in {cache_path}. Can not train without labels. See {help_url}'
 
-        # Read cache
-        cache.pop('hash')  # remove hash
-        labels, shapes = zip(*cache.values())
-        self.labels = list(labels)
-        self.shapes = np.array(shapes, dtype=np.float64)
-        self.img_files = list(cache.keys())  # update
-        self.label_files = img2label_paths(cache.keys())  # update
-        if single_cls:
-            for x in self.labels:
-                x[:, 0] = 0
-
-        n = len(shapes)  # number of images
+        n = len(shapes) if cache_label else len(self.img_files)  # number of images
         bi = np.floor(np.arange(n) / batch_size).astype(np.int)  # batch index
         nb = bi[-1] + 1  # number of batches
         self.batch = bi  # batch index of image
         self.n = n
 
+            
+
         # Rectangular Training
         if self.rect:
+            if cache_label:
+                raise("cache_label is not supported yet due to shapes is not resolved")
             # Sort by aspect ratio
             s = self.shapes  # wh
             ar = s[:, 1] / s[:, 0]  # aspect ratio
