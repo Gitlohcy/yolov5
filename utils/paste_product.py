@@ -1,4 +1,5 @@
 from utils.gen_image import *
+from utils.yolo_utils.file_util import read_color_imgs
 from typing import List
 import yaml
 from pathlib import Path
@@ -271,18 +272,17 @@ class PasteProduct:
 
         return pasted_back_img, bboxes
 
-    def generate(self, n):
-        imgs, bboxes = np.array([self.paste_front_imgs(imageio.imread(p))
-                        for p in self.back_fnames.sample(n)]
-                        , dtype='object').T
-        return imgs, bboxes
+    def gen_back_img(self, n):
+        back_fnames = pd.Series(self.back_fnames)
+        return (self.paste_front_imgs(back_img)
+                    for back_img in tqdm(read_color_imgs(back_fnames, n), total=n))
+
 
     def gen_then_save(self, n, img_dest: Path, lbl_dest: Path):
         mkdir_if_notExist(Path(img_dest))
         mkdir_if_notExist(Path(lbl_dest))
 
-        imgs, bboxes = self.generate(n)
-        for img, bbox in zip(imgs, bboxes):
+        for img, bbox in self.gen_back_img(n):
             fu.write_img_and_bboxes(img, bbox, img_dest, lbl_dest)
 
 
