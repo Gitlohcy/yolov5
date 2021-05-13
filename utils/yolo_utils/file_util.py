@@ -89,7 +89,7 @@ def img_list_from(img_path, img_file_type):
                 if p.suffix in img_file_type]
 
     def from_paths_in_txt(img_path):
-        return fu.f_readlines(img_path)
+        return f_readlines(img_path)
 
     if img_path.is_dir():
         img_list = from_recursive_dir(img_path)
