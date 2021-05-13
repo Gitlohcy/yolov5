@@ -277,6 +277,15 @@ class PasteProduct:
                         , dtype='object').T
         return imgs, bboxes
 
+    def gen_then_save(self, n, img_dest: Path, lbl_dest: Path):
+        mkdir_if_notExist(Path(img_dest))
+        mkdir_if_notExist(Path(lbl_dest))
+
+        imgs, bboxes = self.generate(n)
+        for img, bbox in zip(imgs, bboxes):
+            fu.write_img_and_bboxes(img, bbox, img_dest, lbl_dest)
+
+
 def create_paste_instance(paste_data_yaml, paste_hyp_yaml, cache='front'):
 
 
