@@ -10,6 +10,10 @@ from imgaug.augmentables.bbs import BoundingBox, BoundingBoxesOnImage
 from imgaug.augmentables.segmaps import SegmentationMapsOnImage
 import imgaug.augmenters as iaa
 
+def mkdir_notExist(p: Path):
+    if not p.is_dir():
+        p.mkdir(parents=True)
+
 #read files
 def yoloLabel_lines_2_list(img, yolo_lines):
     ih, iw , _ = img.shape
