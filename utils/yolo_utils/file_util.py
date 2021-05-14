@@ -1,6 +1,8 @@
 from .general import *
 from .bbox_util import xywh2xyxy, xyxy2xywh
 import uuid
+import shutil, threading, queue
+
 
 import imageio
 import imgaug as ia
@@ -114,3 +116,57 @@ def read_color_imgs(img_paths: pd.Series, n=int, verbose=True):
             if verbose:
                 print('pass grey scale img')
             yield next(read_color_imgs(img_paths, 1))
+
+
+# --------- threading copy -------
+class FileCopy(threading.Thread):
+    def __init__(self, queue_obj, files: List[Path], dirs: List[Path]):
+        threading.Thread.__init__(self)
+        self._queue = queue_obj
+        self.files = [str(f) for f in files]
+        self.dirs = [str(d) for d in dirs]
+        
+        for f in files:
+            if not f.is_file():
+                raise ValueError(f"{f} does not Exist")
+        for d in dirs:
+            if not d.is_dir():
+                raise ValueError(f"{d} is not a directory")
+
+    def run(self):
+        # This puts one object into the queue for each file,
+        # plus a None to indicate completion
+        try:
+            for f in tqdm(self.files):
+                try:
+                    for d in self.dirs:
+                        shutil.copy(f, d)
+                except IOError as e:
+                    self._queue.put(e)
+                else:
+                    self._queue.put(f)
+        finally:
+            self._queue.put(None)  # signal completion
+
+
+def thread_copyfile(files: List[Path], dir_path: Path, verbose=False):
+    '''Eg:
+        files = (tpath/'train'/'images').ls()
+        dir_path = train_setup_dir/'images'
+
+        thread_copyfile(files, dir_path)
+    '''
+
+    print('init filecopy queue...')
+    q_ = queue.Queue()
+    copythread = FileCopy(q_, files, [dir_path])
+    copythread.start()
+    
+    print('start copy')
+    while True:
+        x = q_.get()
+        if x is None:
+            break
+        if verbose:
+            print(x)
+    copythread.join()
