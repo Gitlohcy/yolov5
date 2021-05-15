@@ -1,7 +1,10 @@
 from .general import *
 from .bbox_util import xywh2xyxy, xyxy2xywh
 import uuid
-import shutil, threading, queue
+import os
+import shutil
+import threading
+import queue
 
 
 import imageio
@@ -13,6 +16,15 @@ import imgaug.augmenters as iaa
 def mkdir_notExist(p: Path):
     if not p.is_dir():
         p.mkdir(parents=True)
+
+def remove(path):
+    """ param <path> could either be relative or absolute. """
+    if os.path.isfile(path) or os.path.islink(path):
+        os.remove(path)  # remove the file
+    elif os.path.isdir(path):
+        shutil.rmtree(path)  # remove dir and all contains
+    else:
+        raise ValueError("file {} is not a file or dir.".format(path))
 
 #read files
 def yoloLabel_lines_2_list(img, yolo_lines):
