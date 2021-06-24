@@ -3,6 +3,7 @@ from utils.yolo_utils.file_util import read_color_imgs
 from typing import List
 import yaml
 from pathlib import Path
+from imgaug import parameters as iap
 
 
 class PasteProduct:
@@ -86,11 +87,20 @@ class PasteProduct:
     def set_hyp_dict(self, hyp_dict):
         ## assign tuple for range between (min, max) in imgaug library
         keys_with_range = ["rotate", "batch_resize"]
+
+        if hyp_dict["batch_resize_distribution"] == "normal":
+            print(
+                f"resize in normal distribution, ignore range({hyp_dict['batch_resize']}) set in batch_resize"
+            )
+            hyp_dict["batch_resize"] = iap.Beta(2.0, 2.0)
+
+            hyp_dict["rotate"] = tuple(hyp_dict["rotate"])
+        else:
+            for k in keys_with_range:
+                hyp_dict[k] = tuple(hyp_dict[k])
+
         for c in "hsv":
             hyp_dict["hsv_" + c][1] = tuple(hyp_dict["hsv_" + c][1])
-
-        for k in keys_with_range:
-            hyp_dict[k] = tuple(hyp_dict[k])
 
         self.hyp_dict = hyp_dict
         self.hyp_dict["m_blur_chance"] = hyp_dict["motion_blur"][0]
@@ -165,6 +175,7 @@ class PasteProduct:
 
     def get_img_fname(self, img_id):
         is_id = self.coco_df["images"]["id"] == img_id
+
         if is_id.any():
             return self.coco_df["images"][is_id]["file_name"].values[0]
         else:
