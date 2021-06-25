@@ -89,10 +89,14 @@ class PasteProduct:
         keys_with_range = ["rotate", "batch_resize"]
 
         if hyp_dict["batch_resize_distribution"] == "normal":
+
+            stochastic_params = iap.Beta(1.8, 1.8) - iap.Normal(0.5, 0.1)
+            hyp_dict["batch_resize"] = stochastic_params
             print(
                 f"resize in normal distribution, ignore range({hyp_dict['batch_resize']}) set in batch_resize"
             )
-            hyp_dict["batch_resize"] = iap.Beta(2.0, 2.0)
+            print("plot resize distribution:")
+            iap.show_distributions_grid([stochastic_params])
 
             hyp_dict["rotate"] = tuple(hyp_dict["rotate"])
         else:
