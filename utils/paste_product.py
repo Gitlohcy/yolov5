@@ -3,6 +3,7 @@ from utils.yolo_utils.file_util import read_color_imgs
 from typing import List
 import yaml
 from pathlib import Path
+from utils.yolo_utils.imgaug_util import stochastic_params, show_dist
 from imgaug import parameters as iap
 
 
@@ -88,15 +89,19 @@ class PasteProduct:
         ## assign tuple for range between (min, max) in imgaug library
         keys_with_range = ["rotate", "batch_resize"]
 
-        if hyp_dict["batch_resize_distribution"] == "normal":
+        if "batch_resize_distribution" in hyp_dict and hyp_dict[
+            "batch_resize_distribution"
+        ] in ["normal", "uniform"]:
 
-            stochastic_params = iap.Beta(1.8, 1.8) - iap.Normal(0.5, 0.1)
-            hyp_dict["batch_resize"] = stochastic_params
+            hyp_dict["batch_resize"] = stochastic_params(
+                *hyp_dict["batch_resize"], dist=hyp_dict["batch_resize_distribution"]
+            )
             print(
-                f"resize in normal distribution, ignore range({hyp_dict['batch_resize']}) set in batch_resize"
+                f"""resize in {hyp_dict["batch_resize_distribution"]} distribution,
+                    range({hyp_dict['batch_resize']}) will be used as distribution's min max"""
             )
             print("plot resize distribution:")
-            iap.show_distributions_grid([stochastic_params])
+            show_dist([hyp_dict["batch_resize"]])
 
             hyp_dict["rotate"] = tuple(hyp_dict["rotate"])
         else:
