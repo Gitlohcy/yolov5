@@ -10,6 +10,7 @@ batch_resize: [0.3, 0.7]  # (min, max)
 batch_resize_distribution: 'uniform'
 class_aug: 0.6  # chance for class level optional augmentation
 motion_blur: [0.7, [5,20], [0, 360]]  #chance, kernel_size, angle
+dropout: [0.2, [0, 0.2], 0.9]   # chance, dropout_rate, per_channel
 
 max_paste_n: 10   # maximum num of small images to paste in background
 paste_dist: [4, 4.5, 3.5, 3, 1, 1, 1, 1, 1, 1]  # weighted paste_n distribution

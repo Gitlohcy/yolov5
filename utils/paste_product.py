@@ -111,10 +111,15 @@ class PasteProduct:
         for c in "hsv":
             hyp_dict["hsv_" + c][1] = tuple(hyp_dict["hsv_" + c][1])
 
-        self.hyp_dict = hyp_dict
+        self.hyp_dict = hyp_dict.copy()
         self.hyp_dict["m_blur_chance"] = hyp_dict["motion_blur"][0]
         self.hyp_dict["m_blur_kernel"] = tuple(hyp_dict["motion_blur"][1])
         self.hyp_dict["m_blur_angle"] = tuple(hyp_dict["motion_blur"][2])
+
+        self.hyp_dict["dropout"] = {}
+        self.hyp_dict["dropout"]["chance"] = hyp_dict["dropout"][0]
+        self.hyp_dict["dropout"]["p"] = tuple(hyp_dict["dropout"][1])
+        self.hyp_dict["dropout"]["per_channel"] = hyp_dict["dropout"][2]
 
     def reset_augs(self):
         self.adjust_hsv = iaa.WithColorspace(
@@ -375,7 +380,21 @@ class PasteProduct:
         return pasted_back_img, bboxes
 
     def aug_after_pasted(self, img):
-        return img
+        # self.hyp_dict["dropout"] = {}
+        # self.hyp_dict["dropout"]["chance"] = 0.2
+        # self.hyp_dict["dropout"]["per_channel"] = 0.9
+        # self.hyp_dict["dropout"]["p"] = (0, 0.2)
+        return iaa.Sequential(
+            [
+                iaa.Sometimes(
+                    self.hyp_dict["dropout"]["chance"],
+                    iaa.Dropout(
+                        p=self.hyp_dict["dropout"]["p"],
+                        per_channel=self.hyp_dict["dropout"]["per_channel"],
+                    ),
+                )
+            ]
+        )(image=img)
 
     def gen_back_img(self, n):
         back_fnames = pd.Series(self.back_fnames)
