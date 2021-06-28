@@ -154,8 +154,39 @@ def batch_resize(scale_ratio):
     return iaa.Resize(scale_ratio)
 
 
-def depth_level_resize(img_num, min_size=0.15, max_size=1.0):
-    return [iaa.Resize(resize_ratio) for resize_ratio in np.linspace(min_size, max_size, num=img_num)]
+def depth_level_resize(n_img, min_size=0.15, max_size=1.0, chance_to_equal_upper_level=0.2):
+    '''create list of resize ratio with size decreased linearly
+    Args
+    ----
+    n_img: int 
+        number of img
+        
+    min_size: float [0-1]
+        minimum size of ratio to be resize
+        
+    max_size: float [0-1]
+        maximum size of ratio to be resize
+        
+    p: float [0-1]
+        chances to replace resize value with previous value in the sizes list
+    '''
+    
+    def to_upper_level_size(level_sizes, is_same_sizes):
+        '''make the size equal to last size if True in `is_same_sizes` mask'''
+        is_same_size_idx = np.array(np.where(is_same_sizes))
+        is_same_size_idx = is_same_size_idx[is_same_size_idx != 0] # first element cant be upscale
+        upper_level_idx = is_same_size_idx - 1
+        level_sizes[is_same_size_idx] = level_sizes[upper_level_idx]
+        return level_sizes
+
+    p = chance_to_equal_upper_level
+    is_same_sizes = np.random.choice([True, False], n_img, p=[p, 1-p])
+    
+    level_sizes = np.linspace(min_size, max_size, num=n_img)
+    return [iaa.Resize(resize_ratio) 
+                         for resize_ratio in to_upper_level_size(level_sizes, is_same_sizes)]
+    
+
 
 
 def aug_front_img(img, segmap, aug_seq):
