@@ -370,7 +370,12 @@ class PasteProduct:
 
         bboxes = bbs_to_yoloList(clean_bbs)
 
+        pasted_back_img = self.aug_after_pasted(pasted_back_img)
+
         return pasted_back_img, bboxes
+
+    def aug_after_pasted(self, img):
+        return img
 
     def gen_back_img(self, n):
         back_fnames = pd.Series(self.back_fnames)
